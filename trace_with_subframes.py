@@ -4,8 +4,8 @@ import sys
 from helpers import trace_helpers
 
 def main():
-  traces = trace_helpers.loadJSONfile()
-  trace_helpers.recordScriptsAndtimers(traces)
+  trace = trace_helpers.loadJSONfile()
+  trace_helpers.recordScriptsAndTimers(trace)
 
 if __name__ == "__main__":
   main()

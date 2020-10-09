@@ -6,83 +6,82 @@ def loadJSONfile():
   parser = argparse.ArgumentParser()
   parser.add_argument("--input_file", help="path to the datafile to process")
   args = parser.parse_args()
-  traces = [];
+  trace = [];
   with open(args.input_file, "r") as file:
-    traces = json.load(file);
-  return traces
+    trace = json.load(file);
+  return trace
   
-def findMainFrame(traces):
-  for trace in traces:
-    if 'args' not in trace.keys():
+def findMainFrame(trace):
+  for slice in trace:
+    if 'args' not in slice.keys():
       continue
-    if 'data' not in trace['args'].keys():
+    if 'data' not in slice['args'].keys():
       continue
-    if 'frames' not in trace['args']['data'].keys():
+    if 'frames' not in slice['args']['data'].keys():
       continue
-    frames = trace['args']['data']['frames'];
-    for frame in trace['args']['data']['frames']:
+    for frame in slice['args']['data']['frames']:
       if 'parent' not in frame.keys():
         return frame['frame']
   return None
 
-def findTracesForMainFrame(traces):
-  frame = findMainFrame(traces)
-  traces_for_frame = []
-  for trace in traces:
+def findSlicesForMainFrame(trace):
+  frame = findMainFrame(trace)
+  slices_for_frame = []
+  for slice in trace:
     current_frame = None
-    if 'args' in trace.keys() and 'frame' in trace['args'].keys():
-      current_frame = trace['args']['frame']
-    elif 'args' in trace.keys() and 'data' in trace['args'].keys() and 'frame' in trace['args']['data'].keys():
-      current_frame = trace['args']['data']['frame']
-    elif 'args' in trace.keys() and 'beginData' in trace['args'].keys() and 'frame' in trace['args']['beginData'].keys():
-      current_frame = trace['args']['beginData']['frame']
+    if 'args' in slice.keys() and 'frame' in slice['args'].keys():
+      current_frame = slice['args']['frame']
+    elif 'args' in slice.keys() and 'data' in slice['args'].keys() and 'frame' in slice['args']['data'].keys():
+      current_frame = slice['args']['data']['frame']
+    elif 'args' in slice.keys() and 'beginData' in slice['args'].keys() and 'frame' in slice['args']['beginData'].keys():
+      current_frame = slice['args']['beginData']['frame']
     if current_frame != frame:
       continue;
-    traces_for_frame.append(trace)
-  return traces_for_frame
+    slices_for_frame.append(slice)
+  return slices_for_frame
 
-def findCommit(traces):
-  for trace in traces:
-    if trace['name'] == 'CommitLoad':
-      return trace['ts']
+def findCommit(trace):
+  for slice in trace:
+    if slice['name'] == 'CommitLoad':
+      return slice['ts']
   return None
 
-def findFCP(traces):
-  for trace in traces:
-    if trace['name'] == 'firstContentfulPaint':
-      return trace['ts']
+def findFCP(trace):
+  for slice in trace:
+    if slice['name'] == 'firstContentfulPaint':
+      return slice['ts']
   return None
 
-def findLCP(traces):
-  for trace in traces:
-    if trace['name'] == 'largestContentfulPaint::Candidate':
-      return trace['ts']
+def findLCP(trace):
+  for slice in trace:
+    if slice['name'] == 'largestContentfulPaint::Candidate':
+      return slice['ts']
   return None
   
-def findDCL(traces):
-  for trace in traces:
-    if trace['name'] == 'MarkDOMContent' and trace['args']['data']['isMainFrame']:
-      return trace['ts']
+def findDCL(trace):
+  for slice in trace:
+    if slice['name'] == 'MarkDOMContent' and slice['args']['data']['isMainFrame']:
+      return slice['ts']
   return None
 
-def findAndPrintScriptsAfterDCL(traces, dcl):
+def findAndPrintScriptsAfterDCL(trace, dcl):
   scripts = []
-  for trace in traces:
-    if trace['name'] == 'EvaluateScript' and trace['ts'] > dcl:
-      scripts.append(trace);
+  for slice in trace:
+    if slice['name'] == 'EvaluateScript' and slice['ts'] > dcl:
+      scripts.append(slice);
   print('Script after DCL count: ' + str(len(scripts)) + ", Duration: " + str(sumDurations(scripts)) + " microseconds")
 
-def sumDurations(traces):
+def sumDurations(trace):
   duration = 0
-  for trace in traces:
-    duration += trace['tdur']
+  for slice in trace:
+    duration += slice['tdur']
   return duration
 
-def findAndPrintTimers(traces, fcp, lcp, dcl):
+def findAndPrintTimers(trace, fcp, lcp, dcl):
   timers = []
-  for trace in traces:
-    if trace['name'] == 'TimerFire':
-      timers.append(trace);
+  for slice in trace:
+    if slice['name'] == 'TimerFire':
+      timers.append(slice);
   print('Total timer count: ' + str(len(timers)))
 
   timers_before = []
@@ -95,12 +94,12 @@ def findAndPrintTimers(traces, fcp, lcp, dcl):
   print('Before FCP/LCP/DCL: ' + str(len(timers_before)) + ", Duration: " + str(sumDurations(timers_before)) + " microseconds")
   print('After FCP/LCP/DCL: ' + str(len(timers_after)) + ", Duration: " + str(sumDurations(timers_after)) + " microseconds")
 
-def recordScriptsAndtimers(traces):
-  fcp = findFCP(traces)
-  lcp = findLCP(traces)
-  dcl = findDCL(traces)
-  commit = findCommit(traces)
+def recordScriptsAndTimers(trace):
+  fcp = findFCP(trace)
+  lcp = findLCP(trace)
+  dcl = findDCL(trace)
+  commit = findCommit(trace)
   print('Time from Commit to DCL: ' + str(dcl - commit) + " microseconds")
-  findAndPrintScriptsAfterDCL(traces, dcl)
-  findAndPrintTimers(traces, fcp, lcp, dcl)  
+  findAndPrintScriptsAfterDCL(trace, dcl)
+  findAndPrintTimers(trace, fcp, lcp, dcl)  
 
